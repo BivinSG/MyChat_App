@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef } from "r
 import { useHistory } from "react-router-dom";
 import io from "socket.io-client";
 
-const ENDPOINT = "http://localhost:5000";
+const ENDPOINT = window.location.hostname === "localhost" ? "http://localhost:5000" : window.location.origin;
 var socket;
 
 const ChatContext = createContext();

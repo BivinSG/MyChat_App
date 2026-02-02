@@ -14,10 +14,6 @@ const app = express();
 
 app.use(express.json()); // to accept json data
 
-// app.get("/", (req, res) => {
-//   res.send("API Running!");
-// });
-
 const aiRoutes = require("./routes/aiRoutes");
 
 app.use("/api/user", userRoutes);
@@ -30,7 +26,7 @@ app.use("/api/ai", aiRoutes);
 const __dirname1 = path.resolve();
 
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname1, "/frontend/build")));
+  app.use(express.static(path.join(__dirname1, "frontend", "build")));
 
   app.get("*", (req, res) =>
     res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
@@ -49,93 +45,90 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(
-  PORT,
-  console.log(`Server running on PORT ${PORT}...`.yellow.bold),
-);
+if (process.env.NODE_ENV !== "production") {
+  const server = app.listen(
+    PORT,
+    console.log(`Server running on PORT ${PORT}...`.yellow.bold)
+  );
 
-const io = require("socket.io")(server, {
-  pingTimeout: 60000,
-  cors: {
-    origin: "http://localhost:3000",
-    // credentials: true,
-  },
-});
-
-io.on("connection", (socket) => {
-  console.log("Connected to socket.io");
-  socket.on("setup", (userData) => {
-    socket.join(userData._id);
-    socket.emit("connected");
+  const io = require("socket.io")(server, {
+    pingTimeout: 60000,
+    cors: {
+      origin: "http://localhost:3000",
+    },
   });
 
-  socket.on("join chat", (room) => {
-    socket.join(room);
-    console.log("User Joined Room: " + room);
-  });
-  socket.on("typing", (room) => socket.in(room).emit("typing", room));
-  socket.on("stop typing", (room) => socket.in(room).emit("stop typing", room));
+  setupSockets(io);
+}
 
-  socket.on("new message", (newMessageRecieved) => {
-    var chat = newMessageRecieved.chat;
-
-    if (!chat.users) return console.log("chat.users not defined");
-
-    chat.users.forEach((user) => {
-      if (user._id == newMessageRecieved.sender._id) return;
-
-      socket.in(user._id).emit("message recieved", newMessageRecieved);
-    });
-  });
-
-  socket.on("message read", (chatId) => {
-    socket.in(chatId).emit("message read", chatId);
-  });
-
-  socket.on("message deleted", (data) => {
-    socket.in(data.chatId).emit("message deleted", data);
-  });
-
-  socket.on("new group", (newGroup) => {
-    newGroup.users.forEach((user) => {
-      socket.in(user._id).emit("group created", newGroup);
-    });
-  });
-
-  // When a member is added to a group
-  socket.on("member added", (data) => {
-    // Notify the newly added user - they need to add this chat to their list
-    if (data.addedUserId) {
-      socket.in(data.addedUserId).emit("added to group", data.chat);
-    }
-
-    // Notify all existing members about the new member
-    data.chat.users.forEach((user) => {
-      socket.in(user._id).emit("group updated", data.chat);
-    });
-  });
-
-  // When a member is removed from a group
-  socket.on("member removed", (data) => {
-    // Notify the removed user
-    socket.in(data.removedUserId).emit("removed from group", {
-      chatId: data.chat._id,
-      chatName: data.chat.chatName
+function setupSockets(io) {
+  io.on("connection", (socket) => {
+    console.log("Connected to socket.io");
+    socket.on("setup", (userData) => {
+      socket.join(userData._id);
+      socket.emit("connected");
     });
 
-    // Notify remaining members about the update
-    data.chat.users.forEach((user) => {
-      socket.in(user._id).emit("group updated", data.chat);
+    socket.on("join chat", (room) => {
+      socket.join(room);
+      console.log("User Joined Room: " + room);
+    });
+    socket.on("typing", (room) => socket.in(room).emit("typing", room));
+    socket.on("stop typing", (room) => socket.in(room).emit("stop typing", room));
+
+    socket.on("new message", (newMessageRecieved) => {
+      var chat = newMessageRecieved.chat;
+      if (!chat.users) return console.log("chat.users not defined");
+      chat.users.forEach((user) => {
+        if (user._id == newMessageRecieved.sender._id) return;
+        socket.in(user._id).emit("message recieved", newMessageRecieved);
+      });
+    });
+
+    socket.on("message read", (chatId) => {
+      socket.in(chatId).emit("message read", chatId);
+    });
+
+    socket.on("message deleted", (data) => {
+      socket.in(data.chatId).emit("message deleted", data);
+    });
+
+    socket.on("new group", (newGroup) => {
+      newGroup.users.forEach((user) => {
+        socket.in(user._id).emit("group created", newGroup);
+      });
+    });
+
+    socket.on("member added", (data) => {
+      if (data.addedUserId) {
+        socket.in(data.addedUserId).emit("added to group", data.chat);
+      }
+      data.chat.users.forEach((user) => {
+        socket.in(user._id).emit("group updated", data.chat);
+      });
+    });
+
+    socket.on("member removed", (data) => {
+      socket.in(data.removedUserId).emit("removed from group", {
+        chatId: data.chat._id,
+        chatName: data.chat.chatName
+      });
+      data.chat.users.forEach((user) => {
+        socket.in(user._id).emit("group updated", data.chat);
+      });
+    });
+
+    socket.on("chat deleted", (data) => {
+      data.users.forEach((user) => {
+        socket.in(user._id).emit("chat deleted", data.chatId);
+      });
+    });
+
+    socket.on("disconnect", () => {
+      console.log("USER DISCONNECTED");
     });
   });
+}
 
-  socket.on("chat deleted", (data) => {
-    data.users.forEach((user) => {
-      socket.in(user._id).emit("chat deleted", data.chatId);
-    });
-  });
+module.exports = app;
 
-  socket.on("disconnect", () => {
-    console.log("USER DISCONNECTED");
-  });
-});
