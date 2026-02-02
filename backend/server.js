@@ -25,7 +25,8 @@ app.use("/api/ai", aiRoutes);
 
 const __dirname1 = path.resolve();
 
-if (process.env.NODE_ENV === "production") {
+// Only serve static files internally if NOT on Vercel
+if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
   app.use(express.static(path.join(__dirname1, "frontend", "build")));
 
   app.get("*", (req, res) =>
