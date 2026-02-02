@@ -1,7 +1,9 @@
 import { CloseIcon } from "@chakra-ui/icons";
-import { Badge } from "@chakra-ui/layout";
+import { Badge, Box } from "@chakra-ui/layout";
 
-const UserBadgeItem = ({ user, handleFunction, admin }) => {
+const UserBadgeItem = ({ user, handleFunction, admin, showRemove = true }) => {
+  const isAdmin = admin?._id === user._id;
+
   return (
     <Badge
       px={2}
@@ -11,15 +13,22 @@ const UserBadgeItem = ({ user, handleFunction, admin }) => {
       mb={2}
       variant="solid"
       fontSize={12}
-      colorScheme="purple"
+      colorScheme={isAdmin ? "teal" : "purple"}
+      bg={isAdmin ? "#00a884" : "#805AD5"}
+      color="white"
       cursor="pointer"
       onClick={handleFunction}
+      display="flex"
+      alignItems="center"
+      fontWeight={isAdmin ? "bold" : "normal"}
     >
+      {isAdmin && <Box as="span" mr={1}>👑</Box>}
       {user.name}
-      {admin === user._id && <span> (Admin)</span>}
-      <CloseIcon pl={1} />
+      {isAdmin && <Box as="span" ml={1} fontSize="10px">(Admin)</Box>}
+      {showRemove && <CloseIcon pl={1} boxSize={3} />}
     </Badge>
   );
 };
 
 export default UserBadgeItem;
+

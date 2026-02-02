@@ -52,7 +52,7 @@ function SideDrawer() {
   const history = useHistory();
 
   const logoutHandler = () => {
-    localStorage.removeItem("userInfo");
+    sessionStorage.clear();
     history.push("/");
   };
 
@@ -63,7 +63,7 @@ function SideDrawer() {
         status: "warning",
         duration: 5000,
         isClosable: true,
-        position: "top-left",
+        position: "bottom-right",
       });
       return;
     }
@@ -88,7 +88,7 @@ function SideDrawer() {
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom-left",
+        position: "bottom-right",
       });
     }
   };
@@ -117,7 +117,7 @@ function SideDrawer() {
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom-left",
+        position: "bottom-right",
       });
     }
   };
@@ -160,7 +160,7 @@ function SideDrawer() {
                   key={notif._id}
                   onClick={() => {
                     setSelectedChat(notif.chat);
-                    setNotification(notification.filter((n) => n !== notif));
+                    setNotification(notification.filter((n) => n._id !== notif._id));
                   }}
                 >
                   {notif.chat.isGroupChat

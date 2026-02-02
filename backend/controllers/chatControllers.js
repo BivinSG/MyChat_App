@@ -29,12 +29,17 @@ const accessChat = asyncHandler(async (req, res) => {
   });
 
   if (isChat.length > 0) {
+    // Unhide the chat for the current user if it was hidden
+    await Chat.findByIdAndUpdate(isChat[0]._id, {
+      $pull: { hiddenFor: req.user._id }
+    });
     res.send(isChat[0]);
   } else {
     var chatData = {
       chatName: "sender",
       isGroupChat: false,
       users: [req.user._id, userId],
+      hiddenFor: [], // Initialize empty hiddenFor array
     };
 
     try {
@@ -56,7 +61,11 @@ const accessChat = asyncHandler(async (req, res) => {
 //@access          Protected
 const fetchChats = asyncHandler(async (req, res) => {
   try {
-    Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
+    Chat.find({
+      users: { $elemMatch: { $eq: req.user._id } },
+      // Exclude chats hidden by this user
+      hiddenFor: { $ne: req.user._id }
+    })
       .populate("users", "-password")
       .populate("groupAdmin", "-password")
       .populate("latestMessage")
@@ -82,7 +91,14 @@ const createGroupChat = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: "Please Fill all the feilds" });
   }
 
-  var users = JSON.parse(req.body.users);
+  var users = req.body.users;
+  if (typeof users === "string") {
+    try {
+      users = JSON.parse(users);
+    } catch (e) {
+      return res.status(400).send({ message: "Invalid users format" });
+    }
+  }
 
   if (users.length < 2) {
     return res
@@ -143,7 +159,19 @@ const renameGroup = asyncHandler(async (req, res) => {
 const removeFromGroup = asyncHandler(async (req, res) => {
   const { chatId, userId } = req.body;
 
-  // check if the requester is admin
+  // First, get the chat to check admin status
+  const chat = await Chat.findById(chatId);
+
+  if (!chat) {
+    res.status(404);
+    throw new Error("Chat Not Found");
+  }
+
+  // Prevent admin from removing themselves while other members exist
+  if (chat.groupAdmin.toString() === userId && chat.users.length > 1) {
+    res.status(400);
+    throw new Error("Admin cannot remove themselves. Transfer admin rights first or remove all other members.");
+  }
 
   const removed = await Chat.findByIdAndUpdate(
     chatId,
@@ -157,12 +185,7 @@ const removeFromGroup = asyncHandler(async (req, res) => {
     .populate("users", "-password")
     .populate("groupAdmin", "-password");
 
-  if (!removed) {
-    res.status(404);
-    throw new Error("Chat Not Found");
-  } else {
-    res.json(removed);
-  }
+  res.json(removed);
 });
 
 // @desc    Add user to Group / Leave
@@ -193,6 +216,97 @@ const addToGroup = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Hide Chat (only hides for current user, doesn't affect other user)
+// @route   PUT /api/chat/hide/:chatId
+// @access  Protected
+const hideChat = asyncHandler(async (req, res) => {
+  const { chatId } = req.params;
+
+  try {
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      res.status(404);
+      throw new Error("Chat Not Found");
+    }
+
+    // Check if user is part of the chat
+    const isUserInChat = chat.users.some(u => u.toString() === req.user._id.toString());
+
+    if (!isUserInChat) {
+      res.status(403);
+      throw new Error("Not authorized to hide this chat");
+    }
+
+    // Add user to hiddenFor array (if not already there)
+    await Chat.findByIdAndUpdate(chatId, {
+      $addToSet: { hiddenFor: req.user._id }
+    });
+
+    res.json({ message: "Chat hidden successfully" });
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
+
+// @desc    Delete Chat (for one-to-one: hides only for current user; for groups: leaves the group)
+// @route   DELETE /api/chat/:chatId
+// @access  Protected
+const deleteChat = asyncHandler(async (req, res) => {
+  const { chatId } = req.params;
+
+  try {
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      res.status(404);
+      throw new Error("Chat Not Found");
+    }
+
+    // Check if user is part of the chat
+    const isUserInChat = chat.users.some(u => u.toString() === req.user._id.toString());
+
+    if (!isUserInChat) {
+      res.status(403);
+      throw new Error("Not authorized to delete this chat");
+    }
+
+    if (chat.isGroupChat) {
+      // Check if user is the admin
+      const isAdmin = chat.groupAdmin && chat.groupAdmin.toString() === req.user._id.toString();
+
+      // If admin is trying to leave and there are other members, prevent it
+      if (isAdmin && chat.users.length > 1) {
+        res.status(400);
+        throw new Error("Admin cannot leave the group while other members are present. Please transfer admin rights or remove all members first.");
+      }
+
+      // For group chats: remove user from the group (leave group)
+      await Chat.findByIdAndUpdate(chatId, {
+        $pull: { users: req.user._id }
+      });
+
+      // If admin left and was the only member, delete the group entirely
+      if (isAdmin && chat.users.length === 1) {
+        await Chat.findByIdAndDelete(chatId);
+        res.json({ message: "Group deleted successfully" });
+      } else {
+        res.json({ message: "Left the group successfully" });
+      }
+    } else {
+      // For one-to-one chats: just hide the chat for this user (other user still sees it)
+      await Chat.findByIdAndUpdate(chatId, {
+        $addToSet: { hiddenFor: req.user._id }
+      });
+      res.json({ message: "Chat removed from your list" });
+    }
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
+
 module.exports = {
   accessChat,
   fetchChats,
@@ -200,4 +314,7 @@ module.exports = {
   renameGroup,
   addToGroup,
   removeFromGroup,
+  hideChat,
+  deleteChat,
 };
+

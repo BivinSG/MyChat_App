@@ -6,12 +6,14 @@ import { useToast } from "@chakra-ui/toast";
 import axios from "axios";
 import { useState } from "react";
 import { useHistory } from "react-router";
+import { ChatState } from "../../Context/ChatProvider";
 
 const Signup = () => {
   const [show, setShow] = useState(false);
   const handleClick = () => setShow(!show);
   const toast = useToast();
   const history = useHistory();
+  const { setUser } = ChatState();
 
   const [name, setName] = useState();
   const [email, setEmail] = useState();
@@ -28,7 +30,7 @@ const Signup = () => {
         status: "warning",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       setPicLoading(false);
       return;
@@ -39,8 +41,9 @@ const Signup = () => {
         status: "warning",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
+      setPicLoading(false);
       return;
     }
     console.log(name, email, password, pic);
@@ -66,19 +69,20 @@ const Signup = () => {
         status: "success",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
-      localStorage.setItem("userInfo", JSON.stringify(data));
+      sessionStorage.setItem("userInfo", JSON.stringify(data));
+      setUser(data);
       setPicLoading(false);
       history.push("/chats");
     } catch (error) {
       toast({
         title: "Error Occured!",
-        description: error.response.data.message,
+        description: error.response?.data?.message || "Registration failed",
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       setPicLoading(false);
     }
@@ -92,7 +96,7 @@ const Signup = () => {
         status: "warning",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       return;
     }
@@ -122,7 +126,7 @@ const Signup = () => {
         status: "warning",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       setPicLoading(false);
       return;

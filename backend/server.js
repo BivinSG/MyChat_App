@@ -6,6 +6,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const path = require("path");
+const cors = require("cors");
 
 dotenv.config();
 connectDB();
@@ -17,9 +18,12 @@ app.use(express.json()); // to accept json data
 //   res.send("API Running!");
 // });
 
+const aiRoutes = require("./routes/aiRoutes");
+
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
+app.use("/api/ai", aiRoutes);
 
 // --------------------------deployment------------------------------
 
@@ -43,11 +47,11 @@ if (process.env.NODE_ENV === "production") {
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 const server = app.listen(
   PORT,
-  console.log(`Server running on PORT ${PORT}...`.yellow.bold)
+  console.log(`Server running on PORT ${PORT}...`.yellow.bold),
 );
 
 const io = require("socket.io")(server, {
@@ -69,8 +73,8 @@ io.on("connection", (socket) => {
     socket.join(room);
     console.log("User Joined Room: " + room);
   });
-  socket.on("typing", (room) => socket.in(room).emit("typing"));
-  socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+  socket.on("typing", (room) => socket.in(room).emit("typing", room));
+  socket.on("stop typing", (room) => socket.in(room).emit("stop typing", room));
 
   socket.on("new message", (newMessageRecieved) => {
     var chat = newMessageRecieved.chat;
@@ -84,8 +88,54 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.off("setup", () => {
+  socket.on("message read", (chatId) => {
+    socket.in(chatId).emit("message read", chatId);
+  });
+
+  socket.on("message deleted", (data) => {
+    socket.in(data.chatId).emit("message deleted", data);
+  });
+
+  socket.on("new group", (newGroup) => {
+    newGroup.users.forEach((user) => {
+      socket.in(user._id).emit("group created", newGroup);
+    });
+  });
+
+  // When a member is added to a group
+  socket.on("member added", (data) => {
+    // Notify the newly added user - they need to add this chat to their list
+    if (data.addedUserId) {
+      socket.in(data.addedUserId).emit("added to group", data.chat);
+    }
+
+    // Notify all existing members about the new member
+    data.chat.users.forEach((user) => {
+      socket.in(user._id).emit("group updated", data.chat);
+    });
+  });
+
+  // When a member is removed from a group
+  socket.on("member removed", (data) => {
+    // Notify the removed user
+    socket.in(data.removedUserId).emit("removed from group", {
+      chatId: data.chat._id,
+      chatName: data.chat.chatName
+    });
+
+    // Notify remaining members about the update
+    data.chat.users.forEach((user) => {
+      socket.in(user._id).emit("group updated", data.chat);
+    });
+  });
+
+  socket.on("chat deleted", (data) => {
+    data.users.forEach((user) => {
+      socket.in(user._id).emit("chat deleted", data.chatId);
+    });
+  });
+
+  socket.on("disconnect", () => {
     console.log("USER DISCONNECTED");
-    socket.leave(userData._id);
   });
 });

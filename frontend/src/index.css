@@ -11,3 +11,153 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.chakra-toast__inner {
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+.chakra-alert {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Xerah AI Floating Button Animations */
+@keyframes xerahFloat {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes bubbleRise {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0);
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(1);
+  }
+}
+
+@keyframes typingDots {
+
+  0%,
+  20% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes popupSlide {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes robotPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 242, 254, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 242, 254, 0);
+  }
+}
+
+.xerah-button {
+  animation: xerahFloat 3s ease-in-out infinite, robotPulse 2s ease-in-out infinite;
+}
+
+.xerah-button:hover {
+  animation: none;
+  transform: scale(1.15) !important;
+}
+
+.xerah-popup {
+  animation: popupSlide 0.15s ease-out forwards;
+}
+
+.xerah-popup .typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #00a884;
+  border-radius: 50%;
+  margin-left: 3px;
+  animation: typingDots 1.4s ease-in-out infinite;
+}
+
+.xerah-popup .typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.xerah-popup .typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.xerah-bubble {
+  position: absolute;
+  background: rgba(0, 242, 254, 0.6);
+  border-radius: 50%;
+  animation: bubbleRise 2s ease-out infinite;
+}
+
+.xerah-bubble:nth-child(1) {
+  width: 8px;
+  height: 8px;
+  left: 5px;
+  bottom: 40px;
+  animation-delay: 0s;
+}
+
+.xerah-bubble:nth-child(2) {
+  width: 5px;
+  height: 5px;
+  left: 15px;
+  bottom: 35px;
+  animation-delay: 0.5s;
+}
+
+.xerah-bubble:nth-child(3) {
+  width: 6px;
+  height: 6px;
+  right: 10px;
+  bottom: 38px;
+  animation-delay: 1s;
+}

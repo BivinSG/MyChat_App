@@ -22,7 +22,7 @@ import { ChatState } from "../../Context/ChatProvider";
 import UserBadgeItem from "../userAvatar/UserBadgeItem";
 import UserListItem from "../userAvatar/UserListItem";
 
-const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
+const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain, children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [groupChatName, setGroupChatName] = useState();
   const [search, setSearch] = useState("");
@@ -31,7 +31,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
   const [renameloading, setRenameLoading] = useState(false);
   const toast = useToast();
 
-  const { selectedChat, setSelectedChat, user } = ChatState();
+  const { selectedChat, setSelectedChat, user, socket } = ChatState();
 
   const handleSearch = async (query) => {
     setSearch(query);
@@ -46,7 +46,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
           Authorization: `Bearer ${user.token}`,
         },
       };
-      const { data } = await axios.get(`/api/user?search=${search}`, config);
+      const { data } = await axios.get(`/api/user?search=${query}`, config);
       console.log(data);
       setLoading(false);
       setSearchResult(data);
@@ -57,7 +57,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom-left",
+        position: "bottom-right",
       });
       setLoading(false);
     }
@@ -90,11 +90,11 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
     } catch (error) {
       toast({
         title: "Error Occured!",
-        description: error.response.data.message,
+        description: error.response?.data?.message || error.response?.data || error.message,
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       setRenameLoading(false);
     }
@@ -108,7 +108,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       return;
     }
@@ -119,7 +119,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       return;
     }
@@ -142,15 +142,21 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
 
       setSelectedChat(data);
       setFetchAgain(!fetchAgain);
+
+      // Notify all members about the new member
+      if (socket) {
+        socket.emit("member added", { chat: data, addedUserId: user1._id });
+      }
+
       setLoading(false);
     } catch (error) {
       toast({
         title: "Error Occured!",
-        description: error.response.data.message,
+        description: error.response?.data?.message || error.response?.data || error.message,
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       setLoading(false);
     }
@@ -164,7 +170,20 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    // Prevent admin from removing themselves while other members exist
+    if (user1._id === selectedChat.groupAdmin._id && selectedChat.users.length > 1) {
+      toast({
+        title: "Admin cannot leave",
+        description: "Transfer admin rights to another member or remove all other members first.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-right",
       });
       return;
     }
@@ -188,15 +207,24 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
       user1._id === user._id ? setSelectedChat() : setSelectedChat(data);
       setFetchAgain(!fetchAgain);
       fetchMessages();
+
+      // Notify all members about the removal
+      if (socket) {
+        socket.emit("member removed", {
+          chat: data,
+          removedUserId: user1._id
+        });
+      }
+
       setLoading(false);
     } catch (error) {
       toast({
         title: "Error Occured!",
-        description: error.response.data.message,
+        description: error.response?.data?.message || "Failed to remove user",
         status: "error",
         duration: 5000,
         isClosable: true,
-        position: "bottom",
+        position: "bottom-right",
       });
       setLoading(false);
     }
@@ -205,7 +233,11 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
 
   return (
     <>
-      <IconButton d={{ base: "flex" }} icon={<ViewIcon />} onClick={onOpen} />
+      {children ? (
+        <span onClick={onOpen}>{children}</span>
+      ) : (
+        <IconButton d={{ base: "flex" }} icon={<ViewIcon />} onClick={onOpen} />
+      )}
 
       <Modal onClose={onClose} isOpen={isOpen} isCentered>
         <ModalOverlay />
@@ -269,8 +301,17 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button onClick={() => handleRemove(user)} colorScheme="red">
-              Leave Group
+            <Button
+              onClick={() => handleRemove(user)}
+              colorScheme="red"
+              isDisabled={selectedChat.groupAdmin._id === user._id && selectedChat.users.length > 1}
+              title={selectedChat.groupAdmin._id === user._id && selectedChat.users.length > 1
+                ? "Admin cannot leave. Remove all members first."
+                : "Leave this group"}
+            >
+              {selectedChat.groupAdmin._id === user._id && selectedChat.users.length > 1
+                ? "Admin (Cannot Leave)"
+                : "Leave Group"}
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -4,3 +4,56 @@
   overflow-y: scroll;
   scrollbar-width: none;
 }
+
+.typing-container {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  margin-bottom: 12px;
+  margin-left: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  border-radius: 20px;
+  width: fit-content;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  margin: 0 4px;
+  background-color: #00a884;
+  border-radius: 50%;
+  display: inline-block;
+  animation: floatWave 1.5s infinite ease-in-out;
+}
+
+.dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes floatWave {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.4;
+  }
+
+  33% {
+    transform: translateY(-6px) translateX(2px);
+    opacity: 1;
+  }
+
+  66% {
+    transform: translateY(2px) translateX(4px);
+    opacity: 0.7;
+  }
+}
