@@ -1,4 +1,10 @@
-/node_modules
-node_modules/
-/frontend/node_modules/
+node_modules
+/frontend/node_modules
+/frontend/build
 .env
+.vercel
+*.log
+.DS_Store
+yarn.lock
+package-lock.json.bak
+/api/node_modules
