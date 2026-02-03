@@ -25,7 +25,6 @@ import UserListItem from "../userAvatar/UserListItem";
 const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain, children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [groupChatName, setGroupChatName] = useState();
-  const [search, setSearch] = useState("");
   const [searchResult, setSearchResult] = useState([]);
   const [loading, setLoading] = useState(false);
   const [renameloading, setRenameLoading] = useState(false);
@@ -34,7 +33,6 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain, childr
   const { selectedChat, setSelectedChat, user, socket } = ChatState();
 
   const handleSearch = async (query) => {
-    setSearch(query);
     if (!query) {
       return;
     }

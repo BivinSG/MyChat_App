@@ -29,7 +29,6 @@ const ForwardModal = ({ children, content, isOpen: externalIsOpen, onClose: exte
     const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
     const onClose = externalOnClose !== undefined ? externalOnClose : internalOnClose;
 
-    const [search, setSearch] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -37,7 +36,6 @@ const ForwardModal = ({ children, content, isOpen: externalIsOpen, onClose: exte
     const toast = useToast();
 
     const handleSearch = async (query) => {
-        setSearch(query);
         if (!query) {
             setSearchResults([]);
             return;
@@ -50,7 +48,7 @@ const ForwardModal = ({ children, content, isOpen: externalIsOpen, onClose: exte
                     Authorization: `Bearer ${user.token}`,
                 },
             };
-            const { data } = await axios.get(`/api/user?search=${search}`, config);
+            const { data } = await axios.get(`/api/user?search=${query}`, config);
             setSearchResults(data);
             setLoading(false);
         } catch (error) {
