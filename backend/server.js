@@ -13,6 +13,7 @@ connectDB();
 const app = express();
 
 app.use(express.json()); // to accept json data
+app.use(cors());
 
 const aiRoutes = require("./routes/aiRoutes");
 
@@ -25,17 +26,13 @@ app.use("/api/ai", aiRoutes);
 
 const __dirname1 = path.resolve();
 
-// Only serve static files internally if NOT on Vercel
+// Only serve static files internally if NOT on Vercel (Vercel handles this via vercel.json)
 if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
   app.use(express.static(path.join(__dirname1, "frontend", "build")));
 
   app.get("*", (req, res) =>
     res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
   );
-} else {
-  app.get("/", (req, res) => {
-    res.send("API is running..");
-  });
 }
 
 // --------------------------deployment------------------------------
